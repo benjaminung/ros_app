@@ -75,4 +75,20 @@ typedef struct
     SAMPLE_APP_HkTlm_Payload_t Payload;   /**< \brief Telemetry payload */
 } SAMPLE_APP_HkTlm_t;
 
+/*************************************************************************/
+/*
+** Type definition (SAMPLE App RandAssNum)
+*/
+
+typedef struct
+{
+    CFE_MSG_TelemetryHeader_t TlmHeader;
+    uint8 CommandErrorCounter;
+    uint8 CommandCounter;
+    uint32 x;
+    uint32 y;
+    uint32 z;
+} SAMPLE_APP_RandAssNum_t;
+
+
 #endif /* SAMPLE_APP_MSG_H */

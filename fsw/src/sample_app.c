@@ -70,12 +70,52 @@ void SAMPLE_APP_Main(void)
     /*
     ** SAMPLE Runloop
     */
+
+    CFE_TIME_SysTime_t time;
+    time.Seconds = 0;
+    time.Subseconds = 0;
+    uint32 counter = 0;
+
     while (CFE_ES_RunLoop(&SAMPLE_APP_Data.RunStatus) == true)
     {
         /*
         ** Performance Log Exit Stamp
         */
         CFE_ES_PerfLogExit(SAMPLE_APP_PERF_ID);
+
+        /*
+        ** Get current time
+        */
+        CFE_TIME_SysTime_t newtime = CFE_TIME_GetTime();
+        if ((newtime.Seconds - time.Seconds) >= 2)
+        {
+            time = newtime;
+            /*
+            ** Send random ass number
+            */
+            SAMPLE_APP_Data.RndAssNum.CommandErrorCounter = SAMPLE_APP_Data.ErrCounter;
+            SAMPLE_APP_Data.RndAssNum.CommandCounter      = SAMPLE_APP_Data.CmdCounter;
+
+            SAMPLE_APP_Data.RndAssNum.x = time.Seconds;
+            SAMPLE_APP_Data.RndAssNum.y = time.Subseconds;
+            SAMPLE_APP_Data.RndAssNum.z = counter;
+
+            CFE_SB_TimeStampMsg(&SAMPLE_APP_Data.RndAssNum.TlmHeader.Msg);
+            CFE_SB_TransmitMsg(&SAMPLE_APP_Data.RndAssNum.TlmHeader.Msg, true);
+
+            CFE_ES_WriteToSysLog("Sent Random Ass Number packet");
+
+            // ROS_RosInit();
+
+            // geometry_msgs::Vector3 msg;
+            // msg.x = counter;
+            // msg.y = time.Seconds;
+            // msg.z = time.Subseconds;
+            // ROS_INFO("send vector msg: (%f,%f,%f), rostimenow.toSec: %f", msg.x, msg.y, msg.x , ros::Time::now().toSec());
+            // ros_pub.publish(msg);
+
+            counter ++;
+        }
 
         /* Pend on receipt of command packet */
         status = CFE_SB_ReceiveBuffer(&SBBufPtr, SAMPLE_APP_Data.CommandPipe, CFE_SB_PEND_FOREVER);
@@ -114,6 +154,8 @@ void SAMPLE_APP_Main(void)
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 int32 SAMPLE_APP_Init(void)
 {
+    
+
     int32 status;
 
     SAMPLE_APP_Data.RunStatus = CFE_ES_RunStatus_APP_RUN;
@@ -166,6 +208,11 @@ int32 SAMPLE_APP_Init(void)
     CFE_MSG_Init(&SAMPLE_APP_Data.HkTlm.TlmHeader.Msg, SAMPLE_APP_HK_TLM_MID, sizeof(SAMPLE_APP_Data.HkTlm));
 
     /*
+    ** Initialize random ass number packet (clear user data area).
+    */
+    CFE_MSG_Init(&SAMPLE_APP_Data.RndAssNum.TlmHeader.Msg, SAMPLE_APP_RNDASSNUM_MID, sizeof(SAMPLE_APP_Data.RndAssNum));
+
+    /*
     ** Create Software Bus message pipe.
     */
     status = CFE_SB_CreatePipe(&SAMPLE_APP_Data.CommandPipe, SAMPLE_APP_Data.PipeDepth, SAMPLE_APP_Data.PipeName);
@@ -182,6 +229,16 @@ int32 SAMPLE_APP_Init(void)
     if (status != CFE_SUCCESS)
     {
         CFE_ES_WriteToSysLog("Sample App: Error Subscribing to HK request, RC = 0x%08lX\n", (unsigned long)status);
+        return (status);
+    }
+    
+    /*
+    ** Subscribe to random ass number packets
+    */
+    status = CFE_SB_Subscribe(SAMPLE_APP_RNDASSNUM_MID, SAMPLE_APP_Data.CommandPipe);
+    if (status != CFE_SUCCESS)
+    {
+        CFE_ES_WriteToSysLog("Sample App: Error Subscribing to RandAssNum request, RC = 0x%08lX\n", (unsigned long)status);
         return (status);
     }
 
@@ -243,6 +300,10 @@ void SAMPLE_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
             SAMPLE_APP_ReportHousekeeping((CFE_MSG_CommandHeader_t *)SBBufPtr);
             break;
 
+        case SAMPLE_APP_RNDASSNUM_MID:
+            SAMPLE_APP_ProcessRandAssNum(SBBufPtr);
+            break;
+
         default:
             CFE_EVS_SendEvent(SAMPLE_APP_INVALID_MSGID_ERR_EID, CFE_EVS_EventType_ERROR,
                               "SAMPLE: invalid command packet,MID = 0x%x", (unsigned int)CFE_SB_MsgIdToValue(MsgId));
@@ -252,6 +313,14 @@ void SAMPLE_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
     return;
 
 } /* End SAMPLE_APP_ProcessCommandPacket */
+
+void SAMPLE_APP_ProcessRandAssNum(CFE_SB_Buffer_t *SBBufPtr)
+{
+    CFE_ES_WriteToSysLog("Successfully received random ass number packet!");
+    SAMPLE_APP_RandAssNum_t *RandAssNumPtr = (SAMPLE_APP_RandAssNum_t *)SBBufPtr;
+    CFE_ES_WriteToSysLog("Random Ass X = %d\nRandom Ass Y = %d\nRandom Ass Z=  %d\n"
+        ,RandAssNumPtr->x, RandAssNumPtr->y, RandAssNumPtr->z);
+}
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*                                                                            */

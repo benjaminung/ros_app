@@ -74,6 +74,11 @@ typedef struct
     SAMPLE_APP_HkTlm_t HkTlm;
 
     /*
+    ** RandAssNum telemetry packet
+    */
+    SAMPLE_APP_RandAssNum_t RndAssNum;
+
+    /*
     ** Run Status variable used in the main processing loop
     */
     uint32 RunStatus;
@@ -104,6 +109,7 @@ typedef struct
 void  SAMPLE_APP_Main(void);
 int32 SAMPLE_APP_Init(void);
 void  SAMPLE_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr);
+void  SAMPLE_APP_ProcessRandAssNum(CFE_SB_Buffer_t *SBBufPtr);
 void  SAMPLE_APP_ProcessGroundCommand(CFE_SB_Buffer_t *SBBufPtr);
 int32 SAMPLE_APP_ReportHousekeeping(const CFE_MSG_CommandHeader_t *Msg);
 int32 SAMPLE_APP_ResetCounters(const SAMPLE_APP_ResetCountersCmd_t *Msg);
