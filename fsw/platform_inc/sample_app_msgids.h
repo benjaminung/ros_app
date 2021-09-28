@@ -36,5 +36,6 @@
 #define SAMPLE_APP_SEND_HK_MID 0x1883
 /* V1 Telemetry Message IDs must be 0x08xx */
 #define SAMPLE_APP_HK_TLM_MID 0x0883
+#define SAMPLE_APP_RNDASSNUM_MID 0X884
 
 #endif /* SAMPLE_APP_MSGIDS_H */

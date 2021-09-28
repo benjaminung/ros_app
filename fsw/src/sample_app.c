@@ -36,6 +36,7 @@
 /* The sample_lib module provides the SAMPLE_LIB_Function() prototype */
 #include <string.h>
 #include "sample_lib.h"
+#include "ros_pub_lib.h"
 
 /*
 ** global data
@@ -105,7 +106,13 @@ void SAMPLE_APP_Main(void)
 
             CFE_ES_WriteToSysLog("Sent Random Ass Number packet");
 
-            // ROS_RosInit();
+            int32 test = ROS_PUB_LIB_Test();
+            CFE_ES_WriteToSysLog("ROS_PUB_LIB_Test returned: %d\n",test);
+
+            char c[1] = "\0";
+            char * a = &c[0];
+            RosPub * rosPub = ROS_PUB_LIB_InitRos(0,&a);
+            ROS_PUB_LIB_SendVectorToRos(rosPub,time.Seconds,time.Subseconds,counter);
 
             // geometry_msgs::Vector3 msg;
             // msg.x = counter;
