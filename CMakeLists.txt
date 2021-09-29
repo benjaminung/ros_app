@@ -1,23 +1,12 @@
-project(CFE_SAMPLE_APP C)
+project(CFE_ROS_APP C)
 
 include_directories(fsw/mission_inc)
 include_directories(fsw/platform_inc)
+include_directories(../vec_app/fsw/platform_inc)
 
 # Create the app module
-add_cfe_app(sample_app fsw/src/sample_app.c)
+add_cfe_app(ros_app fsw/src/ros_app.c)
 
-# Include the public API from sample_lib to demonstrate how
+# Include the public API from ros_lib to demonstrate how
 # to call library-provided functions
-add_cfe_app_dependency(sample_app sample_lib)
-add_cfe_app_dependency(sample_app ros_pub_lib)
-
-# Add table
-add_cfe_tables(sampleAppTable fsw/tables/sample_app_tbl.c)
-
-# If UT is enabled, then add the tests from the subdirectory
-# Note that this is an app, and therefore does not provide
-# stub functions, as other entities would not typically make 
-# direct function calls into this application.
-if (ENABLE_UNIT_TESTS)
-  add_subdirectory(unit-test)
-endif (ENABLE_UNIT_TESTS)
+add_cfe_app_dependency(ros_app ros_lib)

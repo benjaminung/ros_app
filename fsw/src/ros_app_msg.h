@@ -23,18 +23,18 @@
 /**
  * @file
  *
- * Define SAMPLE App  Messages and info
+ * Define ROS App  Messages and info
  */
 
-#ifndef SAMPLE_APP_MSG_H
-#define SAMPLE_APP_MSG_H
+#ifndef ROS_APP_MSG_H
+#define ROS_APP_MSG_H
 
 /*
-** SAMPLE App command codes
+** ROS App command codes
 */
-#define SAMPLE_APP_NOOP_CC           0
-#define SAMPLE_APP_RESET_COUNTERS_CC 1
-#define SAMPLE_APP_PROCESS_CC        2
+#define ROS_APP_NOOP_CC           0
+#define ROS_APP_RESET_COUNTERS_CC 1
+#define ROS_APP_PROCESS_CC        2
 
 /*************************************************************************/
 
@@ -44,7 +44,7 @@
 typedef struct
 {
     CFE_MSG_CommandHeader_t CmdHeader; /**< \brief Command header */
-} SAMPLE_APP_NoArgsCmd_t;
+} ROS_APP_NoArgsCmd_t;
 
 /*
 ** The following commands all share the "NoArgs" format
@@ -53,13 +53,13 @@ typedef struct
 ** allows them to change independently in the future without changing the prototype
 ** of the handler function
 */
-typedef SAMPLE_APP_NoArgsCmd_t SAMPLE_APP_NoopCmd_t;
-typedef SAMPLE_APP_NoArgsCmd_t SAMPLE_APP_ResetCountersCmd_t;
-typedef SAMPLE_APP_NoArgsCmd_t SAMPLE_APP_ProcessCmd_t;
+typedef ROS_APP_NoArgsCmd_t ROS_APP_NoopCmd_t;
+typedef ROS_APP_NoArgsCmd_t ROS_APP_ResetCountersCmd_t;
+typedef ROS_APP_NoArgsCmd_t ROS_APP_ProcessCmd_t;
 
 /*************************************************************************/
 /*
-** Type definition (SAMPLE App housekeeping)
+** Type definition (ROS App housekeeping)
 */
 
 typedef struct
@@ -67,28 +67,12 @@ typedef struct
     uint8 CommandErrorCounter;
     uint8 CommandCounter;
     uint8 spare[2];
-} SAMPLE_APP_HkTlm_Payload_t;
+} ROS_APP_HkTlm_Payload_t;
 
 typedef struct
 {
     CFE_MSG_TelemetryHeader_t  TlmHeader; /**< \brief Telemetry header */
-    SAMPLE_APP_HkTlm_Payload_t Payload;   /**< \brief Telemetry payload */
-} SAMPLE_APP_HkTlm_t;
+    ROS_APP_HkTlm_Payload_t Payload;   /**< \brief Telemetry payload */
+} ROS_APP_HkTlm_t;
 
-/*************************************************************************/
-/*
-** Type definition (SAMPLE App RandAssNum)
-*/
-
-typedef struct
-{
-    CFE_MSG_TelemetryHeader_t TlmHeader;
-    uint8 CommandErrorCounter;
-    uint8 CommandCounter;
-    uint32 x;
-    uint32 y;
-    uint32 z;
-} SAMPLE_APP_RandAssNum_t;
-
-
-#endif /* SAMPLE_APP_MSG_H */
+#endif /* ROS_APP_MSG_H */

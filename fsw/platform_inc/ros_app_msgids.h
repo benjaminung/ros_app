@@ -1,4 +1,4 @@
-/*******************************************************************************
+/************************************************************************
 **
 **      GSC-18128-1, "Core Flight Executive Version 6.7"
 **
@@ -18,25 +18,23 @@
 **      See the License for the specific language governing permissions and
 **      limitations under the License.
 **
-*******************************************************************************/
+*************************************************************************/
 
 /**
  * @file
  *
- * Define sample app table
+ * Define Sample App Message IDs
+ *
+ * \note The Sample App assumes default configuration which uses V1 of message id implementation
  */
 
-#ifndef SAMPLE_APP_TABLE_H
-#define SAMPLE_APP_TABLE_H
+#ifndef ROS_APP_MSGIDS_H
+#define ROS_APP_MSGIDS_H
 
-/*
-** Table structure
-*/
-typedef struct
-{
-    uint16 Int1;
-    uint16 Int2;
+/* V1 Command Message IDs must be 0x18xx */
+#define ROS_APP_CMD_MID     0x1882
+#define ROS_APP_SEND_HK_MID 0x1883
+/* V1 Telemetry Message IDs must be 0x08xx */
+#define ROS_APP_HK_TLM_MID 0x0883
 
-} SAMPLE_APP_Table_t;
-
-#endif /* SAMPLE_APP_TABLE_H */
+#endif /* ROS_APP_MSGIDS_H */
