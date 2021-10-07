@@ -67,7 +67,7 @@ typedef struct
     /*
     ** Vector3
     */
-    // VEC_APP_Vector3_t Vector3;
+    ROS_APP_Vector3_t Vector3;
 
     /*
     ** Run Status variable used in the main processing loop
@@ -101,6 +101,7 @@ int32 ROS_APP_Init(void);
 int32 ROS_APP_ResetCounters(const ROS_APP_ResetCountersCmd_t *Msg);
 void ROS_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr);
 void ROS_APP_ProcessVecMsg(CFE_SB_Buffer_t *SBBufPtr);
+void ROS_APP_SendRosVectorToSB();
 int32 ROS_APP_Noop(const ROS_APP_NoopCmd_t *Msg);
 
 bool ROS_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength);

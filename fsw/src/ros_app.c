@@ -42,7 +42,7 @@
 ** global data
 */
 ROS_APP_Data_t ROS_APP_Data;
-RosPub *rosPub;
+RosNode *rosNode;
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * *  * * * * **/
 /* ROS_APP_Main() -- Application entry point and main process loop         */
@@ -50,13 +50,23 @@ RosPub *rosPub;
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * *  * * * * **/
 void ROS_APP_Main(void)
 {
-    int32            status;
+    uint32            status;
     CFE_SB_Buffer_t *SBBufPtr;
 
     /*
     ** Create the first Performance Log entry
     */
     CFE_ES_PerfLogEntry(ROS_APP_PERF_ID);
+
+
+    char c[1] = "\0";
+    char * a = &c[0];
+    rosNode = ROS_LIB_InitRos(0,&a);
+    RosMessageType rosMsgType = ROS_LIB_Vector3;
+    char rosTopicToCfs[] = "to_cfs_vectormsg";
+    char rosTopicToRos[] = "to_ros_vectormsg";
+    ROS_LIB_InitPublisher(rosNode, rosMsgType, rosTopicToRos);
+    ROS_LIB_InitSubscriber(rosNode, rosMsgType, rosTopicToCfs);
 
     /*
     ** Perform application specific initialization
@@ -69,10 +79,6 @@ void ROS_APP_Main(void)
         ROS_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
     }
 
-    char c[1] = "\0";
-    char * a = &c[0];
-    rosPub = ROS_LIB_InitRos(0,&a);
-
     /*
     ** ROS Runloop
     */
@@ -84,8 +90,9 @@ void ROS_APP_Main(void)
         CFE_ES_PerfLogExit(ROS_APP_PERF_ID);
 
         /* Pend on receipt of command packet */
-        status = CFE_SB_ReceiveBuffer(&SBBufPtr, ROS_APP_Data.CommandPipe, CFE_SB_PEND_FOREVER);
-
+        // CFE_ES_WriteToSysLog("ROS_APP: Polling command pipe for messages.\n");
+        status = CFE_SB_RcvMsg(&ROS_APP_Data.MsgPtr, ROS_APP_Data.CommandPipe, CFE_SB_POLL);
+        // CFE_ES_WriteToSysLog("ROS_APP: Finished polling command pipe for messages.\n");
         /*
         ** Performance Log Entry Stamp
         */
@@ -93,24 +100,31 @@ void ROS_APP_Main(void)
 
         if (status == CFE_SUCCESS)
         {
-            ROS_APP_ProcessCommandPacket(SBBufPtr);
+            ROS_APP_ProcessCommandPacket(ROS_AppData.MsgPtr);
+        }
+        else if (status == CFE_SB_NO_MESSAGE)
+        {
+            //do nothing
         }
         else
         {
             CFE_EVS_SendEvent(ROS_APP_PIPE_ERR_EID, CFE_EVS_EventType_ERROR,
-                              "ROS APP: SB Pipe Read Error, App Will Exit");
+                              "ROS APP: SB Pipe Read Error, App Will Exit. Error Code is - %d",status);
 
             ROS_APP_Data.RunStatus = CFE_ES_RunStatus_APP_ERROR;
         }
-    }
 
+        ROS_LIB_SpinOnce();
+        ROS_APP_SendRosVectorToSB();
+    }
+    ROS_LIB_DeleteRosNode(rosNode);
     /*
     ** Performance Log Exit Stamp
     */
     CFE_ES_PerfLogExit(ROS_APP_PERF_ID);
 
     CFE_ES_ExitApp(ROS_APP_Data.RunStatus);
-    ROS_LIB_DeleteRosPub(rosPub);
+    
 } /* End of ROS_APP_Main() */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  */
@@ -135,8 +149,7 @@ int32 ROS_APP_Init(void)
     */
     ROS_APP_Data.PipeDepth = ROS_APP_PIPE_DEPTH;
 
-    strncpy(ROS_APP_Data.PipeName, "ROS_APP_CMD_PIPE", sizeof(ROS_APP_Data.PipeName));
-    ROS_APP_Data.PipeName[sizeof(ROS_APP_Data.PipeName) - 1] = 0;
+    strncpy(ROS_APP_Data.PipeName, "ROS_APP_CMD_PIPE");
 
     /*
     ** Initialize event filter table...
@@ -166,8 +179,6 @@ int32 ROS_APP_Init(void)
         return (status);
     }
 
-    // CFE_MSG_Init(&ROS_APP_Data.Vector3.TlmHeader.Msg, VEC_APP_VECTOR3_MID, sizeof(ROS_APP_Data.Vector3));
-
     /*
     ** Create Software Bus message pipe.
     */
@@ -179,7 +190,12 @@ int32 ROS_APP_Init(void)
     }
 
     /*
-    ** Subscribe to vector packets
+    ** Initialize message header for message sent to VEC_APP
+    */
+    CFE_MSG_Init(&ROS_APP_Data.Vector3.TlmHeader.Msg, VEC_APP_ROSVEC3_MID, sizeof(ROS_APP_Data.Vector3));
+
+    /*
+    ** Subscribe to vector packets coming from VEC_APP
     */
     status = CFE_SB_Subscribe(VEC_APP_VECTOR3_MID, ROS_APP_Data.CommandPipe);
     if (status != CFE_SUCCESS)
@@ -195,6 +211,21 @@ int32 ROS_APP_Init(void)
 
 } /* End of ROS_APP_Init() */
 
+void ROS_APP_SendRosVectorToSB()
+{
+    while(ROS_LIB_GetVectorListSize() > 0)
+    {
+        cfsVector3 rosVec = ROS_LIB_GetNextVector();
+        ROS_APP_Data.Vector3.x = rosVec.x;
+        ROS_APP_Data.Vector3.y = rosVec.y;
+        ROS_APP_Data.Vector3.z = rosVec.z;
+        CFE_SB_TimeStampMsg(&ROS_APP_Data.Vector3.TlmHeader.Msg);
+        CFE_SB_TransmitMsg(&ROS_APP_Data.Vector3.TlmHeader.Msg, true);
+        
+        CFE_ES_WriteToSysLog("ROS_APP: Sent Vector3 packet to software bus\n");
+    }
+}
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
 /*  Name:  ROS_APP_ProcessCommandPacket                                    */
 /*                                                                            */
@@ -203,16 +234,16 @@ int32 ROS_APP_Init(void)
 /*     command pipe.                                                          */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-void ROS_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
+void ROS_APP_ProcessCommandPacket(CFE_SB_MsgPtr_t Msg)
 {
     CFE_SB_MsgId_t MsgId = CFE_SB_INVALID_MSG_ID;
 
-    CFE_MSG_GetMsgId(&SBBufPtr->Msg, &MsgId);
+    MsgId = CFE_SB_GetMsgId(Msg);
 
     switch (MsgId)
     {
         case VEC_APP_VECTOR3_MID:
-            ROS_APP_ProcessVecMsg(SBBufPtr);
+            ROS_APP_ProcessVecMsg(Msg);
             break;
 
         default:
@@ -230,17 +261,17 @@ void ROS_APP_ProcessCommandPacket(CFE_SB_Buffer_t *SBBufPtr)
 /* ROS_APP_ProcessVecMsg() -- ROS ground commands                */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * **/
-void ROS_APP_ProcessVecMsg(CFE_SB_Buffer_t *SBBufPtr)
+void ROS_APP_ProcessVecMsg(CFE_SB_MsgPtr_t Msg)
 {
-    if (ROS_APP_VerifyCmdLength(&SBBufPtr->Msg, sizeof(VEC_APP_Vector3_t)))
+    if (ROS_APP_VerifyCmdLength(Msg, sizeof(VEC_APP_Vector3_t)))
     {
-        VEC_APP_Vector3_t *vecMsg = (VEC_APP_Vector3_t *)(&(SBBufPtr->Msg));
+        VEC_APP_Vector3_t *vecMsg = (VEC_APP_Vector3_t *)(&Msg);
         double x = vecMsg->x;
         double y = vecMsg->y;
         double z = vecMsg->z;
-        CFE_ES_WriteToSysLog("Received Vec Msg: %.0f, %.0f, %.0f\n", x, y, z);
+        CFE_ES_WriteToSysLog("ROS_APP: Received Vec Msg from software bus: %.0f, %.0f, %.0f\n", x, y, z);
 
-        ROS_LIB_SendVectorToRos(rosPub,x,y,z);
+        ROS_LIB_SendVectorToRos(rosNode,x,y,z);
     }
 }
 
@@ -270,7 +301,7 @@ int32 ROS_APP_Noop(const ROS_APP_NoopCmd_t *Msg)
 /*         part of the task telemetry.                                        */
 /*                                                                            */
 /* * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * *  * *  * * * * */
-int32 ROS_APP_ResetCounters(const ROS_APP_ResetCountersCmd_t *Msg)
+int32 ROS_APP_ResetCounters(const ROS_APP_ResetCounters_t *Msg)
 {
 
     ROS_APP_Data.CmdCounter = 0;
@@ -290,23 +321,22 @@ int32 ROS_APP_ResetCounters(const ROS_APP_ResetCountersCmd_t *Msg)
 bool ROS_APP_VerifyCmdLength(CFE_MSG_Message_t *MsgPtr, size_t ExpectedLength)
 {
     bool              result       = true;
-    size_t            ActualLength = 0;
+    uint16            ActualLength = 0;
     CFE_SB_MsgId_t    MsgId        = CFE_SB_INVALID_MSG_ID;
-    CFE_MSG_FcnCode_t FcnCode      = 0;
 
-    CFE_MSG_GetSize(MsgPtr, &ActualLength);
+    ActualLength = CFE_SB_GetTotalMsgLength(Msg);
 
     /*
     ** Verify the command packet length.
     */
     if (ExpectedLength != ActualLength)
     {
-        CFE_MSG_GetMsgId(MsgPtr, &MsgId);
-        CFE_MSG_GetFcnCode(MsgPtr, &FcnCode);
+        MsgId   = CFE_SB_GetMsgId(Msg);
+        uint16         CommandCode = CFE_SB_GetCmdCode(Msg);
 
         CFE_EVS_SendEvent(ROS_APP_LEN_ERR_EID, CFE_EVS_EventType_ERROR,
                           "Invalid Msg length: ID = 0x%X,  CC = %u, Len = %u, Expected = %u",
-                          (unsigned int)CFE_SB_MsgIdToValue(MsgId), (unsigned int)FcnCode, (unsigned int)ActualLength,
+                          (unsigned int)CFE_SB_MsgIdToValue(MsgId), CommandCode, ActualLength,
                           (unsigned int)ExpectedLength);
 
         result = false;

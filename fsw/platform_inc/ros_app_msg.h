@@ -75,4 +75,16 @@ typedef struct
     ROS_APP_HkTlm_Payload_t Payload;   /**< \brief Telemetry payload */
 } ROS_APP_HkTlm_t;
 
+// for vectors received from ROS
+typedef struct
+{
+    CFE_MSG_TelemetryHeader_t  TlmHeader;
+    uint8 CommandErrorCounter;
+    uint8 CommandCounter;
+    double x;
+    double y;
+    double z;
+} ROS_APP_Vector3_t;
+
+
 #endif /* ROS_APP_MSG_H */
